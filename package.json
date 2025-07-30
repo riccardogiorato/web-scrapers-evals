@@ -1,0 +1,30 @@
+{
+  "name": "web-scrapers-evals",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "files": [
+    "./dist/*"
+  ],
+  "scripts": {
+    "test": "vitest run src",
+    "dev": "vitest watch src",
+    "dev:ui": "pnpm vite preview --outDir html"
+  },
+  "dependencies": {
+    "@ai-sdk/togetherai": "0.2.16",
+    "@vitest/ui": "^3.2.4",
+    "ai": "^4.3.19",
+    "autoevals": "^0.0.130",
+    "dotenv": "^17.2.0",
+    "unstorage": "^1.13.1",
+    "vitest": "^3.2.4",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@mendable/firecrawl-js": "^1.29.1",
+    "brave-search": "^0.9.0",
+    "exa-js": "^1.8.20",
+    "linkup-sdk": "^1.1.0"
+  }
+}
