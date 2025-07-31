@@ -16,7 +16,7 @@ export const jobListingTestSites: TestSite[] = [
     category: "jobs"
   },
   {
-    name:"ZipRecruiter Plumber Jobs",
+    name: "ZipRecruiter Plumber Jobs",
     url: "https://www.ziprecruiter.ie/jobs/search?q=Journeyman+Plumber&utm_source=zr-go-redirect",
     category: "jobs"
   }
@@ -57,7 +57,8 @@ export const socialMediaTestSites: TestSite[] = [
     name: "Instagram National Geographic Profile",
     url: "https://www.instagram.com/natgeo/",
     category: "social"
-{
+  },
+  {
     name: "X.com Elon Musk Profile",
     url: "https://x.com/elonmusk",
     category: "social"
