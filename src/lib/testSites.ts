@@ -6,23 +6,18 @@ import { TestSite } from "./types";
 // Job listing test sites - structured employment data
 export const jobListingTestSites: TestSite[] = [
   {
-    name: "Indeed Software Engineer Job",
-    url: "https://www.indeed.com/viewjob?jk=example-software-engineer",
+    name: "Weworkremotely Remote Full Stack Jobs",
+    url: "https://weworkremotely.com/categories/remote-full-stack-programming-jobs#job-listings",
     category: "jobs"
   },
   {
-    name: "LinkedIn Product Manager Position",
-    url: "https://www.linkedin.com/jobs/view/example-product-manager",
+    name: "Indeed Product Manager Usa Jobs",
+    url: "https://www.indeed.com/q-product-manager-usa-jobs.html",
     category: "jobs"
   },
   {
-    name: "Indeed Remote Developer Role",
-    url: "https://www.indeed.com/viewjob?jk=remote-developer-example",
-    category: "jobs"
-  },
-  {
-    name: "LinkedIn Data Scientist Opening",
-    url: "https://www.linkedin.com/jobs/view/data-scientist-example",
+    name:"ZipRecruiter Plumber Jobs",
+    url: "https://www.ziprecruiter.ie/jobs/search?q=Journeyman+Plumber&utm_source=zr-go-redirect",
     category: "jobs"
   }
 ];
@@ -36,17 +31,17 @@ export const realEstateTestSites: TestSite[] = [
   },
   {
     name: "Zillow Condo Listing",
-    url: "https://www.zillow.com/homedetails/456-Oak-Ave-Unit-2B-Somewhere-NY-10001/67890_zpid/",
+    url: "https://www.zillow.com/prattville-al/",
     category: "realestate"
   },
   {
     name: "Realtor.com Property Details",
-    url: "https://www.realtor.com/realestateandhomes-detail/789-Pine-St_Hometown_TX_75001_M12345-67890",
+    url: "https://www.realtor.com/realestateforsale",
     category: "realestate"
   },
   {
     name: "Redfin Home Listing",
-    url: "https://www.redfin.com/CA/Los-Angeles/321-Elm-Dr-90210/home/example",
+    url: "https://www.redfin.com/houses-near-me",
     category: "realestate"
   }
 ];
@@ -62,17 +57,16 @@ export const socialMediaTestSites: TestSite[] = [
     name: "Instagram National Geographic Profile",
     url: "https://www.instagram.com/natgeo/",
     category: "social"
-  },
-  {
-    name: "Instagram Public Post Example",
-    url: "https://www.instagram.com/p/example-public-post/",
+{
+    name: "X.com Elon Musk Profile",
+    url: "https://x.com/elonmusk",
     category: "social"
   },
   {
-    name: "Instagram Science Museum Profile",
-    url: "https://www.instagram.com/sciencemuseum/",
+    name: "X.com Together Compute Profile",
+    url: "https://x.com/togethercompute",
     category: "social"
-  }
+  },
 ];
 
 // Academic test sites - research papers and scholarly content
@@ -92,14 +86,14 @@ export const newsTestSites: TestSite[] = [
 // Technical documentation sites - structured content with code examples
 export const technicalTestSites: TestSite[] = [
   { name: "MDN Web API Documentation", url: "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API", category: "technical" },
-  { name: "Stack Overflow Question", url: "https://stackoverflow.com/questions/1", category: "technical" },
+  { name: "Stack Overflow Question", url: "https://stackoverflow.com/questions/979256/sorting-an-array-of-objects-by-property-values", category: "technical" },
   { name: "GitHub TypeScript README", url: "https://github.com/microsoft/TypeScript/blob/main/README.md", category: "technical" }
 ];
 
 // E-commerce sites - product information and structured data
 export const ecommerceTestSites: TestSite[] = [
-  { name: "Amazon Product Page", url: "https://www.amazon.com/dp/B08N5WRWNW", category: "ecommerce" },
-  { name: "eBay Auction Item", url: "https://www.ebay.com/itm/123456789", category: "ecommerce" },
+  { name: "Amazon Product Page", url: "https://www.amazon.com/New-Amazon-Kindle-glare-free-adjustable/dp/B0DDZQTYHL", category: "ecommerce" },
+  { name: "Shopify merch store", url: "https://shopify.supply/products/shopify-counter", category: "ecommerce" },
   { name: "Tesla Store Product", url: "https://shop.tesla.com/product/model-s-key-fob", category: "ecommerce" }
 ];
 

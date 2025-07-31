@@ -2,9 +2,11 @@
 // Scraping functionality types
 export interface ScrapedContent {
   url: string;
-  title: string;
-  content: string;
-  responseTime: number;
+  response?: {
+    title?: string;
+    content?: string;
+    scrapingTimeMs?: number;
+  }
   error?: string;
 }
 
