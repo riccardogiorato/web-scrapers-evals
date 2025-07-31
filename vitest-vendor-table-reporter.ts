@@ -3,8 +3,9 @@ import { Reporter } from "vitest";
 type TestMeta = {
   file: string;
   vendor: string;
-  testType: string;
+  siteName: string;
   testName: string;
+  category: string;
   id: string;
   result?: { state: string; duration?: number };
 };
@@ -13,29 +14,52 @@ export default class VendorTableReporter implements Reporter {
   allTests: Map<string, TestMeta> = new Map();
 
   onCollected(files: any) {
-    function parseVendorAndTestType(suiteName: string) {
-      const match = suiteName.match(/^\[(.+?)\] (.+)$/);
-      if (!match) return { vendor: "unknown", testType: suiteName };
-      return { vendor: match[1], testType: match[2] };
+    function parseVendorFromSuite(suiteName: string) {
+      // Extract vendor from suite name like "firecrawl vendor" or "exa vendor"
+      const match = suiteName.match(/^(.+?)\s+vendor$/);
+      return match ? match[1] : null;
     }
-    function walkSuite(this: VendorTableReporter, suite: any, file: string) {
+
+    function extractSiteNameFromTest(testName: string) {
+      // Extract site name from test name like "should scrape BBC Technology News"
+      const match = testName.match(/^should scrape (.+)$/);
+      return match ? match[1] : testName;
+    }
+
+    function getCategoryFromFile(fileName: string, suiteName?: string) {
+      // Extract category from file name or suite context
+      const fullContext = `${fileName} ${suiteName || ''}`.toLowerCase();
+      if (fullContext.includes("news")) return "news";
+      if (fullContext.includes("social")) return "social";
+      if (fullContext.includes("academic")) return "academic";
+      if (fullContext.includes("technical")) return "technical";
+      if (fullContext.includes("ecommerce")) return "ecommerce";
+      if (fullContext.includes("jobs")) return "jobs";
+      if (fullContext.includes("realestate")) return "realestate";
+      return "other";
+    }
+
+    function walkSuite(this: VendorTableReporter, suite: any, file: string, currentVendor?: string, parentSuiteName?: string) {
       if (suite.tasks) {
         for (const task of suite.tasks) {
           if (task.type === "suite") {
-            walkSuite.call(this, task, file);
+            // Check if this suite defines a vendor
+            const vendor = parseVendorFromSuite(task.name);
+            const nextVendor = vendor || currentVendor;
+            const suiteName = parentSuiteName || task.name;
+            walkSuite.call(this, task, file, nextVendor, suiteName);
           } else if (task.type === "test") {
-            const parentSuite = suite;
-            const { vendor, testType } = parseVendorAndTestType(
-              parentSuite.name
-            );
+            const vendor = currentVendor || "unknown";
+            const siteName = extractSiteNameFromTest(task.name);
+            const category = getCategoryFromFile(file, parentSuiteName);
             this.allTests.set(task.id, {
               file,
               vendor,
-              testType,
+              siteName,
               testName: task.name,
+              category,
               id: task.id,
             });
-            // console.log("[onCollected] Collected test:", task.id, task.name);
           }
         }
       }
@@ -66,90 +90,105 @@ export default class VendorTableReporter implements Reporter {
   }
 
   onFinished() {
-    // Group by testType (row) and vendor (column)
+    // Group by category and siteName (row) and vendor (column)
     const testData = Array.from(this.allTests.values());
-    const vendors = Array.from(new Set(testData.map((t) => t.vendor)));
-    let testTypes = Array.from(new Set(testData.map((t) => t.testType)));
-    testTypes = testTypes.sort((a, b) => a.localeCompare(b));
-    // Build table rows
+    const vendors = Array.from(new Set(testData.map((t) => t.vendor))).sort();
+    const categories = Array.from(new Set(testData.map((t) => t.category))).sort();
+
+
+
+    // Build table rows - grouped by category
     const table: Array<Record<string, string>> = [];
-    for (const testType of testTypes) {
-      const row: Record<string, string> = { Test: testType };
+
+    for (const category of categories) {
+      // Add category header row
+      const categoryHeader: Record<string, string> = { Site: `--- ${category.toUpperCase()} ---` };
       for (const vendor of vendors) {
-        const tests = testData.filter(
-          (t) => t.vendor === vendor && t.testType === testType
-        );
-        if (tests.length === 0) {
-          row[vendor] = "-";
-        } else if (testType.toLowerCase().includes("latency")) {
-          // Show average latency in seconds (to 2 decimal places)
-          const latencies = tests
-            .map((t) => t.result?.duration)
-            .filter((d): d is number => typeof d === "number");
-          if (latencies.length > 0) {
-            const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
-            row[vendor] = avg.toFixed(2) + "s";
+        categoryHeader[vendor] = "---";
+      }
+      table.push(categoryHeader);
+
+      // Get sites for this category
+      const categorySites = Array.from(new Set(
+        testData.filter(t => t.category === category).map(t => t.siteName)
+      )).sort();
+
+      for (const siteName of categorySites) {
+        const row: Record<string, string> = { Site: siteName };
+
+        for (const vendor of vendors) {
+          const test = testData.find(
+            (t) => t.vendor === vendor && t.siteName === siteName && t.category === category
+          );
+
+          if (!test) {
+            row[vendor] = "-";
+          } else if (test.result?.state === "pass") {
+            // Show timing for successful scrapes (duration is already in seconds)
+            const durationS = test.result.duration || 0;
+            row[vendor] = `${durationS.toFixed(1)}s`;
+          } else if (test.result?.state === "fail") {
+            // Show timing for failed scrapes too, but with X indicator
+            const durationS = test.result.duration || 0;
+            row[vendor] = `✗ (${durationS.toFixed(1)}s)`;
           } else {
             row[vendor] = "?";
           }
-        } else if (tests.length === 1) {
-          const state = tests[0].result?.state;
-          row[vendor] = state === "pass" ? "✓" : state === "fail" ? "✗" : "?";
-        } else {
-          // Multiple tests per cell: show percent passed
-          const passed = tests.filter((t) => t.result?.state === "pass").length;
-          row[vendor] = `${passed}/${tests.length} (${Math.round(
-            (passed / tests.length) * 100
-          )}%)`;
         }
+        table.push(row);
       }
-      table.push(row);
     }
-    // Add overall row (global pass rate: total passed / total tests, excluding latency)
-    const overall: Record<string, string> = { Test: "Overall" };
+
+    // Add average time row
+    const avgRow: Record<string, string> = { Site: "avg time" };
     for (const vendor of vendors) {
-      let totalPassed = 0,
-        totalTests = 0;
-      for (const testType of testTypes) {
-        if (testType.toLowerCase().includes("latency")) continue;
-        const tests = testData.filter(
-          (t) => t.vendor === vendor && t.testType === testType
+      const vendorTests = testData.filter(
+        (t) => t.vendor === vendor && t.result?.state === "pass"
+      );
+
+      if (vendorTests.length === 0) {
+        avgRow[vendor] = "-";
+      } else {
+        const totalDuration = vendorTests.reduce(
+          (sum, t) => sum + (t.result?.duration || 0), 0
         );
-        if (tests.length === 0) continue;
-        totalPassed += tests.filter((t) => t.result?.state === "pass").length;
-        totalTests += tests.length;
+        const avgDurationS = (totalDuration / vendorTests.length).toFixed(1);
+        avgRow[vendor] = `${avgDurationS}s`;
       }
-      overall[vendor] = totalTests
-        ? `${Math.round(
-            (totalPassed / totalTests) * 100
-          )}% (${totalPassed}/${totalTests})`
-        : "-";
     }
-    table.push(overall);
+    table.push(avgRow);
+
+    // Add success percentage row
+    const successRow: Record<string, string> = { Site: "% success" };
+    for (const vendor of vendors) {
+      const vendorTests = testData.filter((t) => t.vendor === vendor);
+      const passedTests = vendorTests.filter((t) => t.result?.state === "pass");
+
+      if (vendorTests.length === 0) {
+        successRow[vendor] = "-";
+      } else {
+        const successRate = Math.round((passedTests.length / vendorTests.length) * 100);
+        successRow[vendor] = `${passedTests.length}/${vendorTests.length}`;
+      }
+    }
+    table.push(successRow);
     // Print table without index column, with color
-    const columns = ["Test", ...vendors];
+    const columns = ["Site", ...vendors];
     const RED = "\x1b[31m";
     const GREEN = "\x1b[32m";
     const RESET = "\x1b[0m";
     // Colorize table cells
     function colorize(val: string) {
-      if (val === "✓" || val === "100%") return GREEN + val + RESET;
-      if (
-        val === "✗" ||
-        (/^\d+\/\d+ \(\d+%\)$/.test(val) && !val.includes("100%"))
-      )
-        return RED + val + RESET;
-      if (/^\d+%$/.test(val)) {
-        const num = parseInt(val);
-        if (num === 100) return GREEN + val + RESET;
-        if (num < 100) return RED + val + RESET;
-      }
-      if (/\(\d+%\)/.test(val)) {
-        const percent = parseInt(val.match(/\((\d+)%\)/)?.[1] || "0");
-        if (percent === 100) return GREEN + val + RESET;
-        if (percent < 100) return RED + val + RESET;
-      }
+      if (val === "✓") return GREEN + val + RESET;
       if (val === "✗") return RED + val + RESET;
+      if (/^✗ \(\d+\.\d+s\)$/.test(val)) return RED + val + RESET; // Failed with timing in red
+      if (/^\d+\.\d+s$/.test(val)) return GREEN + val + RESET; // Successful timing in green
+      if (/^\d+\/\d+$/.test(val)) {
+        // Success rate like "2/3"
+        const [passed, total] = val.split('/').map(Number);
+        if (passed === total) return GREEN + val + RESET;
+        if (passed < total) return RED + val + RESET;
+      }
       return val;
     }
     const coloredTable = table.map((row) => {
