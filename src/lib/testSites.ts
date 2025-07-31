@@ -99,7 +99,7 @@ export const ecommerceTestSites: TestSite[] = [
 ];
 
 // All test sites combined - real-world and content quality
-export const allTestSites: TestSite[] = [
+export const ALL_TEST_SITES: TestSite[] = [
   ...jobListingTestSites,
   ...realEstateTestSites,
   ...socialMediaTestSites,
