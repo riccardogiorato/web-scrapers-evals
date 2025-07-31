@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@mendable/firecrawl-js": "^1.29.1",
+    "@types/node": "^24.1.0",
     "brave-search": "^0.9.0",
     "exa-js": "^1.8.20",
     "linkup-sdk": "^1.1.0"
