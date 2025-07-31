@@ -20,11 +20,14 @@ const firecrawlScraperImpl: ScraperFunction = async (url: string, timeout = 3000
 
   try {
     const response = await firecrawlClient.scrapeUrl(url, {
-      formats: ['markdown'],
+      formats: [ "markdown" ],
+      onlyMainContent: true,
+      parsePDF: true,
+      maxAge: 14400000, // 4 hours
       timeout: timeout
     });
 
-    if (!response.success || !(response as any).data) {
+    if (!response.success) {
       throw new Error(response.error || 'Failed to scrape with Firecrawl');
     }
 

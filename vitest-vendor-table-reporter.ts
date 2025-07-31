@@ -8,10 +8,35 @@ type TestMeta = {
   category: string;
   id: string;
   result?: { state: string; duration?: number };
+  scrapingTimeMs?: number;
 };
 
 export default class VendorTableReporter implements Reporter {
   allTests: Map<string, TestMeta> = new Map();
+  private originalConsoleLog = console.log;
+
+  onInit() {
+    // Intercept console.log to capture scraping times
+    console.log = (...args: any[]) => {
+      const message = args.join(' ');
+      const scrapingTimeMatch = message.match(/^SCRAPING_TIME:(.+?):(.+?):(.+)$/);
+      if (scrapingTimeMatch) {
+        const [, vendor, siteName, timeOrStatus] = scrapingTimeMatch;
+        // Find the test with matching vendor and site name
+        for (const [id, test] of this.allTests.entries()) {
+          if (test.vendor === vendor && test.siteName === siteName) {
+            if (timeOrStatus === 'FAILED') {
+              test.scrapingTimeMs = -1; // Mark as failed
+            } else {
+              test.scrapingTimeMs = parseInt(timeOrStatus, 10);
+            }
+            break;
+          }
+        }
+      }
+      this.originalConsoleLog(...args);
+    };
+  }
 
   onCollected(files: any) {
     function parseVendorFromSuite(suiteName: string) {
@@ -124,13 +149,13 @@ export default class VendorTableReporter implements Reporter {
           if (!test) {
             row[vendor] = "-";
           } else if (test.result?.state === "pass") {
-            // Show timing for successful scrapes (duration is already in seconds)
-            const durationS = test.result.duration || 0;
-            row[vendor] = `${durationS.toFixed(1)}s`;
+            // Show actual scraping time from scrapingTimeMs
+            const scrapingTimeMs = test.scrapingTimeMs || 0;
+            const scrapingTimeS = (scrapingTimeMs / 1000).toFixed(1);
+            row[vendor] = `${scrapingTimeS}s`;
           } else if (test.result?.state === "fail") {
-            // Show timing for failed scrapes too, but with X indicator
-            const durationS = test.result.duration || 0;
-            row[vendor] = `✗ (${durationS.toFixed(1)}s)`;
+            // Show X for failed scrapes
+            row[vendor] = "✗";
           } else {
             row[vendor] = "?";
           }
@@ -143,17 +168,17 @@ export default class VendorTableReporter implements Reporter {
     const avgRow: Record<string, string> = { Site: "avg time" };
     for (const vendor of vendors) {
       const vendorTests = testData.filter(
-        (t) => t.vendor === vendor && t.result?.state === "pass"
+        (t) => t.vendor === vendor && t.result?.state === "pass" && t.scrapingTimeMs && t.scrapingTimeMs > 0
       );
 
       if (vendorTests.length === 0) {
         avgRow[vendor] = "-";
       } else {
-        const totalDuration = vendorTests.reduce(
-          (sum, t) => sum + (t.result?.duration || 0), 0
+        const totalScrapingTime = vendorTests.reduce(
+          (sum, t) => sum + (t.scrapingTimeMs || 0), 0
         );
-        const avgDurationS = (totalDuration / vendorTests.length).toFixed(1);
-        avgRow[vendor] = `${avgDurationS}s`;
+        const avgScrapingTimeS = (totalScrapingTime / vendorTests.length / 1000).toFixed(1);
+        avgRow[vendor] = `${avgScrapingTimeS}s`;
       }
     }
     table.push(avgRow);
@@ -233,5 +258,8 @@ export default class VendorTableReporter implements Reporter {
       }
     }
     printColorTable(coloredTable, columns);
+    
+    // Restore original console.log
+    console.log = this.originalConsoleLog;
   }
 }

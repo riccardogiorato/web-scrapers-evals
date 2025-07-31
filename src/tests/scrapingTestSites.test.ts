@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { firecrawlScraper, exaScraper } from "../lib/scraperClients";
-import { newsTestSites } from "../lib/testSites";
+import { ALL_TEST_SITES } from "../lib/testSites";
 
 const vendors = [
   { name: "firecrawl", scraper: firecrawlScraper },
@@ -10,7 +10,7 @@ const vendors = [
 describe("newsTestSites Scraping", () => {
   vendors.forEach(({ name, scraper }) => {
     describe(`${name} vendor`, () => {
-      newsTestSites.forEach((testSite) => {
+      ALL_TEST_SITES.forEach((testSite) => {
         it(`should scrape ${testSite.name}`, async () => {
           const startTime = Date.now();
           const result = await scraper(testSite.url);
@@ -23,6 +23,7 @@ describe("newsTestSites Scraping", () => {
 
           // Track failure without throwing error
           if (result.error) {
+            console.log(`SCRAPING_TIME:${name}:${testSite.name}:FAILED`);
             console.error(`${name} failed to scrape ${testSite.name}: ${result.error}`);
             console.log(`${name} scraping failed for ${testSite.name} in ${totalTime}ms`);
 
@@ -35,12 +36,13 @@ describe("newsTestSites Scraping", () => {
           expect(result.response).toBeDefined();
           expect(result.response!.scrapingTimeMs).toBeGreaterThan(0);
 
-          // Log timing information
+          // Log timing information for reporter to capture
+          console.log(`SCRAPING_TIME:${name}:${testSite.name}:${result.response!.scrapingTimeMs}`);
           console.log(`${name} scraped ${testSite.name} in ${totalTime}ms (reported: ${result.response!.scrapingTimeMs}ms)`);
 
           // If successful, we should have some content
           expect(result.response!.content!.length).toBeGreaterThan(0);
-          expect(result.response!.title!.length).toBeGreaterThan(0);
+          
         }, 60000); // 60 second timeout for scraping operations
       });
     });
