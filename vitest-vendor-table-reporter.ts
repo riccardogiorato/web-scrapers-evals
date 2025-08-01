@@ -1,4 +1,7 @@
 import { Reporter } from "vitest";
+import * as fs from "fs";
+import * as crypto from "crypto";
+import { newsTestSites, academicTestSites, technicalTestSites, ecommerceTestSites, jobListingTestSites, realEstateTestSites, socialMediaTestSites } from "./src/lib/testSites";
 
 type TestMeta = {
   file: string;
@@ -7,35 +10,57 @@ type TestMeta = {
   testName: string;
   category: string;
   id: string;
+  url?: string;
   result?: { state: string; duration?: number };
-  scrapingTimeMs?: number;
+  scrapingTimeMs?: number | null;
 };
 
 export default class VendorTableReporter implements Reporter {
   allTests: Map<string, TestMeta> = new Map();
-  private originalConsoleLog = console.log;
+  private siteNameToUrl: Map<string, string> = new Map();
 
-  onInit() {
-    // Intercept console.log to capture scraping times
-    console.log = (...args: any[]) => {
-      const message = args.join(' ');
-      const scrapingTimeMatch = message.match(/^SCRAPING_TIME:(.+?):(.+?):(.+)$/);
-      if (scrapingTimeMatch) {
-        const [, vendor, siteName, timeOrStatus] = scrapingTimeMatch;
-        // Find the test with matching vendor and site name
-        for (const [id, test] of this.allTests.entries()) {
-          if (test.vendor === vendor && test.siteName === siteName) {
-            if (timeOrStatus === 'FAILED') {
-              test.scrapingTimeMs = -1; // Mark as failed
-            } else {
-              test.scrapingTimeMs = parseInt(timeOrStatus, 10);
-            }
-            break;
-          }
-        }
+  constructor() {
+    // Build mapping from site names to URLs
+    const allSites = [
+      ...newsTestSites,
+      ...academicTestSites,
+      ...technicalTestSites,
+      ...ecommerceTestSites,
+      ...jobListingTestSites,
+      ...realEstateTestSites,
+      ...socialMediaTestSites
+    ];
+
+    for (const site of allSites) {
+      this.siteNameToUrl.set(site.name, site.url);
+    }
+  }
+
+  private generateCacheKey(url: string): string {
+    // Generate the same cache key as used by the scraper
+    return crypto.createHash('md5').update(url).digest('hex');
+  }
+
+  private getCacheFilename(url: string): string {
+    // Convert URL to cache filename format - replace dots with dashes
+    const domain = url.replace(/^https?:\/\//, '').replace(/[\/\?#].*$/, '').replace(/\./g, '-');
+    const cacheKey = this.generateCacheKey(url);
+    return `${domain}-${cacheKey}.json`;
+  }
+
+  private getScrapingTimeFromCache(vendor: string, url: string): number | null {
+    try {
+      const filename = this.getCacheFilename(url);
+      const cachePath = `cache/${vendor}/${filename}`;
+
+      if (fs.existsSync(cachePath)) {
+        const cacheData = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+        return cacheData.data?.response?.scrapingTimeMs || null;
       }
-      this.originalConsoleLog(...args);
-    };
+    } catch (error) {
+      // Cache file doesn't exist or is invalid
+    }
+    return null;
   }
 
   onCollected(files: any) {
@@ -77,12 +102,15 @@ export default class VendorTableReporter implements Reporter {
             const vendor = currentVendor || "unknown";
             const siteName = extractSiteNameFromTest(task.name);
             const category = getCategoryFromFile(file, parentSuiteName);
+            const url = this.siteNameToUrl.get(siteName);
+
             this.allTests.set(task.id, {
               file,
               vendor,
               siteName,
               testName: task.name,
               category,
+              url,
               id: task.id,
             });
           }
@@ -100,14 +128,12 @@ export default class VendorTableReporter implements Reporter {
         const meta = this.allTests.get(id);
         if (meta) {
           meta.result = result;
-          // console.log("[DEBUG BATCH RESULT]", id, meta.testName, result?.state);
         }
       }
       return;
     }
     const task = taskOrBatch;
     if (task.type === "test") {
-      // console.log("[DEBUG TEST RESULT]", task.id, task.name, task.result?.state);
       if (this.allTests.has(task.id)) {
         this.allTests.get(task.id)!.result = task.result;
       }
@@ -115,12 +141,17 @@ export default class VendorTableReporter implements Reporter {
   }
 
   onFinished() {
+    // Read scraping times from cache files
+    for (const test of this.allTests.values()) {
+      if (test.url && test.vendor) {
+        test.scrapingTimeMs = this.getScrapingTimeFromCache(test.vendor, test.url);
+      }
+    }
+
     // Group by category and siteName (row) and vendor (column)
     const testData = Array.from(this.allTests.values());
     const vendors = Array.from(new Set(testData.map((t) => t.vendor))).sort();
     const categories = Array.from(new Set(testData.map((t) => t.category))).sort();
-
-
 
     // Build table rows - grouped by category
     const table: Array<Record<string, string>> = [];
@@ -148,14 +179,18 @@ export default class VendorTableReporter implements Reporter {
 
           if (!test) {
             row[vendor] = "-";
-          } else if (test.result?.state === "pass") {
-            // Show actual scraping time from scrapingTimeMs
-            const scrapingTimeMs = test.scrapingTimeMs || 0;
-            const scrapingTimeS = (scrapingTimeMs / 1000).toFixed(1);
+          } else if (test.result?.state === "pass" && test.scrapingTimeMs) {
+            // Show actual scraping time from cache
+            const scrapingTimeS = (test.scrapingTimeMs / 1000).toFixed(1);
             row[vendor] = `${scrapingTimeS}s`;
           } else if (test.result?.state === "fail") {
-            // Show X for failed scrapes
-            row[vendor] = "✗";
+            // Show X for failed scrapes, with timing if available from cache
+            if (test.scrapingTimeMs) {
+              const scrapingTimeS = (test.scrapingTimeMs / 1000).toFixed(1);
+              row[vendor] = `✗ (${scrapingTimeS}s)`;
+            } else {
+              row[vendor] = "✗";
+            }
           } else {
             row[vendor] = "?";
           }
@@ -168,7 +203,7 @@ export default class VendorTableReporter implements Reporter {
     const avgRow: Record<string, string> = { Site: "avg time" };
     for (const vendor of vendors) {
       const vendorTests = testData.filter(
-        (t) => t.vendor === vendor && t.result?.state === "pass" && t.scrapingTimeMs && t.scrapingTimeMs > 0
+        (t) => t.vendor === vendor && t.scrapingTimeMs && t.scrapingTimeMs > 0
       );
 
       if (vendorTests.length === 0) {
@@ -192,16 +227,17 @@ export default class VendorTableReporter implements Reporter {
       if (vendorTests.length === 0) {
         successRow[vendor] = "-";
       } else {
-        const successRate = Math.round((passedTests.length / vendorTests.length) * 100);
         successRow[vendor] = `${passedTests.length}/${vendorTests.length}`;
       }
     }
     table.push(successRow);
+
     // Print table without index column, with color
     const columns = ["Site", ...vendors];
     const RED = "\x1b[31m";
     const GREEN = "\x1b[32m";
     const RESET = "\x1b[0m";
+
     // Colorize table cells
     function colorize(val: string) {
       if (val === "✓") return GREEN + val + RESET;
@@ -216,6 +252,7 @@ export default class VendorTableReporter implements Reporter {
       }
       return val;
     }
+
     const coloredTable = table.map((row) => {
       const coloredRow: Record<string, string> = {};
       for (const col of columns) {
@@ -223,10 +260,12 @@ export default class VendorTableReporter implements Reporter {
       }
       return coloredRow;
     });
+
     // Custom table printer for color support and alignment
     function stripAnsi(str: string) {
       return str.replace(/\x1B\[[0-9;]*m/g, "");
     }
+
     function printColorTable(
       table: Array<Record<string, string>>,
       columns: string[]
@@ -257,9 +296,7 @@ export default class VendorTableReporter implements Reporter {
         console.log(line);
       }
     }
+
     printColorTable(coloredTable, columns);
-    
-    // Restore original console.log
-    console.log = this.originalConsoleLog;
   }
 }

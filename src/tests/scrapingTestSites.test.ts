@@ -23,7 +23,6 @@ describe("newsTestSites Scraping", () => {
 
           // Track failure without throwing error
           if (result.error) {
-            console.log(`SCRAPING_TIME:${name}:${testSite.name}:FAILED`);
             console.error(`${name} failed to scrape ${testSite.name}: ${result.error}`);
             console.log(`${name} scraping failed for ${testSite.name} in ${totalTime}ms`);
 
@@ -36,8 +35,7 @@ describe("newsTestSites Scraping", () => {
           expect(result.response).toBeDefined();
           expect(result.response!.scrapingTimeMs).toBeGreaterThan(0);
 
-          // Log timing information for reporter to capture
-          console.log(`SCRAPING_TIME:${name}:${testSite.name}:${result.response!.scrapingTimeMs}`);
+          // Log timing information
           console.log(`${name} scraped ${testSite.name} in ${totalTime}ms (reported: ${result.response!.scrapingTimeMs}ms)`);
 
           // If successful, we should have some content
