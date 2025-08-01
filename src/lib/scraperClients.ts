@@ -23,7 +23,7 @@ const firecrawlScraperImpl: ScraperFunction = async (url: string, timeout = 3000
       formats: [ "markdown" ],
       onlyMainContent: true,
       parsePDF: true,
-      maxAge: 14400000, // 4 hours
+      maxAge: 86400000, // 1 day
       timeout: timeout
     });
 

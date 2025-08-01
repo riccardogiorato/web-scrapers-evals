@@ -7,11 +7,12 @@ const vendors = [
   { name: "exa", scraper: exaScraper },
 ];
 
-describe("newsTestSites Scraping", () => {
+describe("Web Scraper Evaluation", () => {
+  // Run all vendor-site combinations in parallel
   vendors.forEach(({ name, scraper }) => {
     describe(`${name} vendor`, () => {
       ALL_TEST_SITES.forEach((testSite) => {
-        it(`should scrape ${testSite.name}`, async () => {
+        it.concurrent(`should scrape ${testSite.name}`, async () => {
           const startTime = Date.now();
           const result = await scraper(testSite.url);
           const endTime = Date.now();

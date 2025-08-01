@@ -148,56 +148,49 @@ export default class VendorTableReporter implements Reporter {
       }
     }
 
-    // Group by category and siteName (row) and vendor (column)
+    // Group by siteName (row) and vendor (column) - no categories
     const testData = Array.from(this.allTests.values());
     const vendors = Array.from(new Set(testData.map((t) => t.vendor))).sort();
-    const categories = Array.from(new Set(testData.map((t) => t.category))).sort();
+    const siteNames = Array.from(new Set(testData.map((t) => t.siteName))).sort();
 
-    // Build table rows - grouped by category
+    // Build table rows - flat list of all sites
     const table: Array<Record<string, string>> = [];
 
-    for (const category of categories) {
-      // Add category header row
-      const categoryHeader: Record<string, string> = { Site: `--- ${category.toUpperCase()} ---` };
+    for (const siteName of siteNames) {
+      const row: Record<string, string> = { Site: siteName };
+
       for (const vendor of vendors) {
-        categoryHeader[vendor] = "---";
-      }
-      table.push(categoryHeader);
+        const test = testData.find(
+          (t) => t.vendor === vendor && t.siteName === siteName
+        );
 
-      // Get sites for this category
-      const categorySites = Array.from(new Set(
-        testData.filter(t => t.category === category).map(t => t.siteName)
-      )).sort();
-
-      for (const siteName of categorySites) {
-        const row: Record<string, string> = { Site: siteName };
-
-        for (const vendor of vendors) {
-          const test = testData.find(
-            (t) => t.vendor === vendor && t.siteName === siteName && t.category === category
-          );
-
-          if (!test) {
-            row[vendor] = "-";
-          } else if (test.result?.state === "pass" && test.scrapingTimeMs) {
-            // Show actual scraping time from cache
+        if (!test) {
+          row[vendor] = "-";
+        } else if (test.result?.state === "pass" && test.scrapingTimeMs) {
+          // Show actual scraping time from cache
+          const scrapingTimeS = (test.scrapingTimeMs / 1000).toFixed(1);
+          row[vendor] = `${scrapingTimeS}s`;
+        } else if (test.result?.state === "fail") {
+          // Show X for failed scrapes, with timing if available from cache
+          if (test.scrapingTimeMs) {
             const scrapingTimeS = (test.scrapingTimeMs / 1000).toFixed(1);
-            row[vendor] = `${scrapingTimeS}s`;
-          } else if (test.result?.state === "fail") {
-            // Show X for failed scrapes, with timing if available from cache
-            if (test.scrapingTimeMs) {
-              const scrapingTimeS = (test.scrapingTimeMs / 1000).toFixed(1);
-              row[vendor] = `✗ (${scrapingTimeS}s)`;
-            } else {
-              row[vendor] = "✗";
-            }
+            row[vendor] = `✗ (${scrapingTimeS}s)`;
           } else {
-            row[vendor] = "?";
+            row[vendor] = "✗";
           }
+        } else {
+          row[vendor] = "?";
         }
-        table.push(row);
       }
+      table.push(row);
     }
+
+    // Add separator row before summary statistics
+    const separatorRow: Record<string, string> = { Site: "---" };
+    for (const vendor of vendors) {
+      separatorRow[vendor] = "---";
+    }
+    table.push(separatorRow);
 
     // Add average time row
     const avgRow: Record<string, string> = { Site: "avg time" };
