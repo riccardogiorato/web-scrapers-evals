@@ -98,6 +98,12 @@ export const ecommerceTestSites: TestSite[] = [
   { name: "Tesla Store Product", url: "https://shop.tesla.com/product/model-s-key-fob", category: "ecommerce" }
 ];
 
+// Extra test sites - additional sites for testing
+export const extraTestSites: TestSite[] = [
+  { name: "Together AI", url: "https://www.together.ai/", category: "extra" },
+  { name: "Nutlope", url: "https://www.nutlope.com/", category: "extra" }
+];
+
 // All test sites combined - real-world and content quality
 export const ALL_TEST_SITES: TestSite[] = [
   ...jobListingTestSites,
@@ -106,6 +112,7 @@ export const ALL_TEST_SITES: TestSite[] = [
   ...academicTestSites,
   ...newsTestSites,
   ...technicalTestSites,
-  ...ecommerceTestSites
+  ...ecommerceTestSites,
+  ...extraTestSites
 ];
 

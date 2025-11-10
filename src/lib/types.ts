@@ -19,5 +19,5 @@ export type ScraperFunction = (
 export interface TestSite {
   name: string;
   url: string;
-  category?: 'academic' | 'news' | 'technical' | 'ecommerce' | 'jobs' | 'realestate' | 'social';
+  category?: 'academic' | 'news' | 'technical' | 'ecommerce' | 'jobs' | 'realestate' | 'social' | 'extra';
 }
