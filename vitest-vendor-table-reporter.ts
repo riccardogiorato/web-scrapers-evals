@@ -1,7 +1,16 @@
 import { Reporter } from "vitest";
 import * as fs from "fs";
 import * as crypto from "crypto";
-import { newsTestSites, academicTestSites, technicalTestSites, ecommerceTestSites, jobListingTestSites, realEstateTestSites, socialMediaTestSites } from "./src/lib/testSites";
+import {
+  newsTestSites,
+  academicTestSites,
+  technicalTestSites,
+  ecommerceTestSites,
+  jobListingTestSites,
+  realEstateTestSites,
+  socialMediaTestSites,
+  extraTestSites,
+} from "./src/lib/testSites";
 
 type TestMeta = {
   file: string;
@@ -28,7 +37,8 @@ export default class VendorTableReporter implements Reporter {
       ...ecommerceTestSites,
       ...jobListingTestSites,
       ...realEstateTestSites,
-      ...socialMediaTestSites
+      ...socialMediaTestSites,
+      ...extraTestSites,
     ];
 
     for (const site of allSites) {
@@ -38,12 +48,15 @@ export default class VendorTableReporter implements Reporter {
 
   private generateCacheKey(url: string): string {
     // Generate the same cache key as used by the scraper
-    return crypto.createHash('md5').update(url).digest('hex');
+    return crypto.createHash("md5").update(url).digest("hex");
   }
 
   private getCacheFilename(url: string): string {
     // Convert URL to cache filename format - replace dots with dashes
-    const domain = url.replace(/^https?:\/\//, '').replace(/[\/\?#].*$/, '').replace(/\./g, '-');
+    const domain = url
+      .replace(/^https?:\/\//, "")
+      .replace(/[\/\?#].*$/, "")
+      .replace(/\./g, "-");
     const cacheKey = this.generateCacheKey(url);
     return `${domain}-${cacheKey}.json`;
   }
@@ -54,7 +67,7 @@ export default class VendorTableReporter implements Reporter {
       const cachePath = `cache/${vendor}/${filename}`;
 
       if (fs.existsSync(cachePath)) {
-        const cacheData = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+        const cacheData = JSON.parse(fs.readFileSync(cachePath, "utf8"));
         return cacheData.data?.response?.scrapingTimeMs || null;
       }
     } catch (error) {
@@ -78,7 +91,7 @@ export default class VendorTableReporter implements Reporter {
 
     function getCategoryFromFile(fileName: string, suiteName?: string) {
       // Extract category from file name or suite context
-      const fullContext = `${fileName} ${suiteName || ''}`.toLowerCase();
+      const fullContext = `${fileName} ${suiteName || ""}`.toLowerCase();
       if (fullContext.includes("news")) return "news";
       if (fullContext.includes("social")) return "social";
       if (fullContext.includes("academic")) return "academic";
@@ -89,7 +102,13 @@ export default class VendorTableReporter implements Reporter {
       return "other";
     }
 
-    function walkSuite(this: VendorTableReporter, suite: any, file: string, currentVendor?: string, parentSuiteName?: string) {
+    function walkSuite(
+      this: VendorTableReporter,
+      suite: any,
+      file: string,
+      currentVendor?: string,
+      parentSuiteName?: string
+    ) {
       if (suite.tasks) {
         for (const task of suite.tasks) {
           if (task.type === "suite") {
@@ -144,14 +163,19 @@ export default class VendorTableReporter implements Reporter {
     // Read scraping times from cache files
     for (const test of this.allTests.values()) {
       if (test.url && test.vendor) {
-        test.scrapingTimeMs = this.getScrapingTimeFromCache(test.vendor, test.url);
+        test.scrapingTimeMs = this.getScrapingTimeFromCache(
+          test.vendor,
+          test.url
+        );
       }
     }
 
     // Group by siteName (row) and vendor (column) - no categories
     const testData = Array.from(this.allTests.values());
     const vendors = Array.from(new Set(testData.map((t) => t.vendor))).sort();
-    const siteNames = Array.from(new Set(testData.map((t) => t.siteName))).sort();
+    const siteNames = Array.from(
+      new Set(testData.map((t) => t.siteName))
+    ).sort();
 
     // Build table rows - flat list of all sites
     const table: Array<Record<string, string>> = [];
@@ -203,9 +227,14 @@ export default class VendorTableReporter implements Reporter {
         avgRow[vendor] = "-";
       } else {
         const totalScrapingTime = vendorTests.reduce(
-          (sum, t) => sum + (t.scrapingTimeMs || 0), 0
+          (sum, t) => sum + (t.scrapingTimeMs || 0),
+          0
         );
-        const avgScrapingTimeS = (totalScrapingTime / vendorTests.length / 1000).toFixed(1);
+        const avgScrapingTimeS = (
+          totalScrapingTime /
+          vendorTests.length /
+          1000
+        ).toFixed(1);
         avgRow[vendor] = `${avgScrapingTimeS}s`;
       }
     }
@@ -239,7 +268,7 @@ export default class VendorTableReporter implements Reporter {
       if (/^\d+\.\d+s$/.test(val)) return GREEN + val + RESET; // Successful timing in green
       if (/^\d+\/\d+$/.test(val)) {
         // Success rate like "2/3"
-        const [passed, total] = val.split('/').map(Number);
+        const [passed, total] = val.split("/").map(Number);
         if (passed === total) return GREEN + val + RESET;
         if (passed < total) return RED + val + RESET;
       }

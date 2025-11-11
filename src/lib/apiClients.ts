@@ -1,11 +1,11 @@
 import { createTogetherAI } from "@ai-sdk/togetherai";
 import { LinkupClient } from "linkup-sdk";
-import FirecrawlApp from "@mendable/firecrawl-js";
+import Firecrawl from "@mendable/firecrawl-js";
 import Exa from "exa-js";
 import { BraveSearch } from "brave-search";
 import "dotenv/config";
 
-export const firecrawlClient = new FirecrawlApp({
+export const firecrawlClient = new Firecrawl({
   apiKey: process.env.FIRECRAWL_API_KEY ?? "",
 });
 

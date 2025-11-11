@@ -114,5 +114,5 @@ export const ALL_TEST_SITES: TestSite[] = [
   ...technicalTestSites,
   ...ecommerceTestSites,
   ...extraTestSites
-];
+].sort((a, b) => a.name.localeCompare(b.name));
 

@@ -1,9 +1,5 @@
 import { ScraperFunction, ScrapedContent } from "./types";
-import {
-  firecrawlClient,
-  exaClient,
-  linkupClient,
-} from "./apiClients";
+import { firecrawlClient, exaClient, linkupClient } from "./apiClients";
 import { withCache } from "./cache/withCache";
 
 // Scraper client interface
@@ -13,26 +9,25 @@ export interface ScraperClient {
   healthCheck: () => Promise<boolean>;
 }
 
+const CACHE_TIME_FIRECRAWL = 604800000; // 1 week
 
 // Firecrawl scraper implementation
-const firecrawlScraperImpl: ScraperFunction = async (url: string, timeout = 30000) => {
+const firecrawlScraperImpl: ScraperFunction = async (
+  url: string,
+  timeout = 30000
+) => {
   const startTime = Date.now();
 
   try {
-    const response = await firecrawlClient.scrapeUrl(url, {
-      formats: [ "markdown" ],
-      onlyMainContent: true,
-      parsePDF: true,
-      maxAge: 86400000, // 1 day
-      timeout: timeout
+    const response = await firecrawlClient.scrape(url, {
+      formats: ["markdown"],
+      maxAge: CACHE_TIME_FIRECRAWL,
+      timeout: timeout,
+      storeInCache: true,
     });
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to scrape with Firecrawl');
-    }
-
-    const content = response.markdown || '';
-    const title = response.metadata?.title || '';
+    const content = response.markdown || "";
+    const title = response.metadata?.title || "";
     const scrapingTimeMs = Date.now() - startTime;
 
     return {
@@ -40,36 +35,52 @@ const firecrawlScraperImpl: ScraperFunction = async (url: string, timeout = 3000
       response: {
         title,
         content,
-        scrapingTimeMs
-      }
+        scrapingTimeMs,
+      },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
+    // Return empty response for failed scrapes
     return {
       url,
-      error: errorMessage
+      response: {
+        title: "",
+        content: "",
+        scrapingTimeMs: Date.now() - startTime,
+      },
     };
   }
 };
 
 // Exa scraper implementation
-const exaScraperImpl: ScraperFunction = async (url: string, timeout = 30000) => {
+const exaScraperImpl: ScraperFunction = async (
+  url: string,
+  timeout = 30000
+) => {
   const startTime = Date.now();
 
   try {
     // Note: Exa doesn't support timeout parameter in getContents
     const response = await exaClient.getContents([url], {
-      text: true
+      text: true,
+      livecrawl: "fallback",
+      livecrawlTimeout: timeout,
     });
 
     if (!response?.results || response.results.length === 0) {
-      throw new Error('No results returned from Exa');
+      // Exa doesn't have content for this URL, return empty
+      return {
+        url,
+        response: {
+          title: "",
+          content: "",
+          scrapingTimeMs: Date.now() - startTime,
+        },
+      };
     }
 
     const result = response.results[0];
-    const content = result.text || '';
-    const title = result.title || '';
+    const content = result.text || "";
+    const title = result.title || "";
     const scrapingTimeMs = Date.now() - startTime;
 
     return {
@@ -77,15 +88,16 @@ const exaScraperImpl: ScraperFunction = async (url: string, timeout = 30000) => 
       response: {
         title,
         content,
-        scrapingTimeMs
-      }
+        scrapingTimeMs,
+      },
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
     return {
       url,
-      error: errorMessage
+      error: errorMessage,
     };
   }
 };
@@ -93,10 +105,12 @@ const exaScraperImpl: ScraperFunction = async (url: string, timeout = 30000) => 
 // Health check functions
 async function checkFirecrawl(): Promise<boolean> {
   try {
-    const result = await firecrawlClient.scrapeUrl('https://www.firecrawl.dev/', {
-      formats: ['markdown']
+    const result = await firecrawlClient.scrape("https://www.firecrawl.dev/", {
+      formats: ["markdown"],
+      maxAge: CACHE_TIME_FIRECRAWL,
     });
-    return result.success;
+
+    return !!result.markdown;
   } catch (error) {
     return false;
   }
@@ -104,15 +118,14 @@ async function checkFirecrawl(): Promise<boolean> {
 
 async function checkExa(): Promise<boolean> {
   try {
-    const result = await exaClient.getContents(['https://exa.ai/'], {
-      text: true
+    const result = await exaClient.getContents(["https://exa.ai/"], {
+      text: true,
     });
     return !!result?.results && result.results.length > 0;
   } catch (error) {
     return false;
   }
 }
-
 
 // Cached scraper functions
 export const firecrawlScraper = withCache("firecrawl", firecrawlScraperImpl);
@@ -124,17 +137,14 @@ export const scraperClients: ScraperClient[] = [
   {
     name: "firecrawl",
     scrape: firecrawlScraper,
-    healthCheck: checkFirecrawl
+    healthCheck: checkFirecrawl,
   },
   {
     name: "exa",
     scrape: exaScraper,
-    healthCheck: checkExa
+    healthCheck: checkExa,
   },
 ];
 
 // Export individual implementations for direct use if needed
-export {
-  firecrawlScraperImpl,
-  exaScraperImpl,
-};
+export { firecrawlScraperImpl, exaScraperImpl };
