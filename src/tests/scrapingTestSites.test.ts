@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { firecrawlScraper, exaScraper, tavilyScraper } from "../lib/scraperClients";
+import { firecrawlScraper, exaScraper, tavilyScraper, linkupScraper } from "../lib/scraperClients";
 import { ALL_TEST_SITES } from "../lib/testSites";
 
 const vendors = [
   { name: "firecrawl", scraper: firecrawlScraper },
   { name: "exa", scraper: exaScraper },
   { name: "tavily", scraper: tavilyScraper },
+  { name: "linkup", scraper: linkupScraper },
 ];
 
 describe("Web Scraper Evaluation", () => {

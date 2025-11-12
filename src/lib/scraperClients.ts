@@ -121,8 +121,6 @@ const tavilyScraperImpl: ScraperFunction = async (
       timeout: timeout / 1000, // Convert to seconds
     });
 
-    console.log(response.failedResults);
-
     if (!response?.results || response.results.length === 0) {
       // Tavily doesn't have content for this URL, return empty
       return {
@@ -138,7 +136,43 @@ const tavilyScraperImpl: ScraperFunction = async (
     const result = response.results[0];
     const content = result.rawContent || "";
     // Tavily doesn't provide title in extract, so we'll leave it empty or extract from content
-    const title = "";
+    const title = result.rawContent.slice(0, 100) || "";
+    const scrapingTimeMs = Date.now() - startTime;
+
+    return {
+      url,
+      response: {
+        title,
+        content,
+        scrapingTimeMs,
+      },
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    return {
+      url,
+      error: errorMessage,
+    };
+  }
+};
+
+// Linkup scraper implementation
+const linkupScraperImpl: ScraperFunction = async (
+  url: string,
+  timeout = 30000
+) => {
+  const startTime = Date.now();
+
+  try {
+    const response = await linkupClient.fetch({
+      url,
+      renderJs: true, // Execute JavaScript before extracting content
+    });
+
+    const content = response.markdown || "";
+    const title = response.markdown.slice(0, 100) || "";
     const scrapingTimeMs = Date.now() - startTime;
 
     return {
@@ -196,11 +230,23 @@ async function checkTavily(): Promise<boolean> {
   }
 }
 
+async function checkLinkup(): Promise<boolean> {
+  try {
+    const result = await linkupClient.fetch({
+      url: "https://linkup.so/",
+      renderJs: true,
+    });
+    return !!result?.markdown;
+  } catch (error) {
+    return false;
+  }
+}
+
 // Cached scraper functions
 export const firecrawlScraper = withCache("firecrawl", firecrawlScraperImpl);
 export const exaScraper = withCache("exa", exaScraperImpl);
 export const tavilyScraper = withCache("tavily", tavilyScraperImpl);
-// export const linkupScraper = withCache("linkup", linkupScraperImpl);
+export const linkupScraper = withCache("linkup", linkupScraperImpl);
 
 // Scraper clients array for testing
 export const scraperClients: ScraperClient[] = [
@@ -219,7 +265,17 @@ export const scraperClients: ScraperClient[] = [
     scrape: tavilyScraper,
     healthCheck: checkTavily,
   },
+  {
+    name: "linkup",
+    scrape: linkupScraper,
+    healthCheck: checkLinkup,
+  },
 ];
 
 // Export individual implementations for direct use if needed
-export { firecrawlScraperImpl, exaScraperImpl, tavilyScraperImpl };
+export {
+  firecrawlScraperImpl,
+  exaScraperImpl,
+  tavilyScraperImpl,
+  linkupScraperImpl,
+};
