@@ -12,7 +12,7 @@
     "dev:ui": "pnpm vite preview --outDir html"
   },
   "dependencies": {
-    "@ai-sdk/togetherai": "^2.0.39",
+    "@ai-sdk/togetherai": "^2.0.3999999",
     "@vitest/ui": "^4.1.0",
     "ai": "^6.0.116",
     "autoevals": "^0.0.132",
