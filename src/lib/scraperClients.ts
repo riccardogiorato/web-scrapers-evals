@@ -5,6 +5,7 @@ import {
   linkupClient,
 } from "./apiClients";
 import { withCache } from "./cache/withCache";
+import { fetchParallelMcpContent } from "./parallelMcpClient.js";
 
 // Scraper client interface
 export interface ScraperClient {
@@ -142,6 +143,35 @@ const linkupScraperImpl: ScraperFunction = async (
   }
 };
 
+// Parallel Search MCP scraper implementation
+const parallelScraperImpl: ScraperFunction = async (
+  url: string,
+  timeout = 30000,
+) => {
+  const startTime = Date.now();
+
+  try {
+    const response = await fetchParallelMcpContent(url, timeout);
+
+    return {
+      url,
+      response: {
+        title: response.title,
+        content: response.content,
+        scrapingTimeMs: Date.now() - startTime,
+      },
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    return {
+      url,
+      error: errorMessage,
+    };
+  }
+};
+
 // Health check functions
 async function checkFirecrawl(): Promise<boolean> {
   try {
@@ -179,10 +209,20 @@ async function checkLinkup(): Promise<boolean> {
   }
 }
 
+async function checkParallel(): Promise<boolean> {
+  try {
+    const result = await fetchParallelMcpContent("https://parallel.ai/", 30000);
+    return result.content.length > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
 // Cached scraper functions
 export const firecrawlScraper = withCache("firecrawl", firecrawlScraperImpl);
 export const exaScraper = withCache("exa", exaScraperImpl);
 export const linkupScraper = withCache("linkup", linkupScraperImpl);
+export const parallelScraper = withCache("parallel", parallelScraperImpl);
 
 // Scraper clients array for testing
 export const scraperClients: ScraperClient[] = [
@@ -201,6 +241,11 @@ export const scraperClients: ScraperClient[] = [
     scrape: linkupScraper,
     healthCheck: checkLinkup,
   },
+  {
+    name: "parallel",
+    scrape: parallelScraper,
+    healthCheck: checkParallel,
+  },
 ];
 
 // Export individual implementations for direct use if needed
@@ -208,4 +253,5 @@ export {
   firecrawlScraperImpl,
   exaScraperImpl,
   linkupScraperImpl,
+  parallelScraperImpl,
 };

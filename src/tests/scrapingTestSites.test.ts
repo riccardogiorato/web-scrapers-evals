@@ -1,29 +1,18 @@
 import { describe, it, expect } from "vitest";
 import type { TestSite } from "../lib/types.js";
-import {
-  firecrawlScraper,
-  exaScraper,
-  linkupScraper,
-} from "../lib/scraperClients.js";
+import { scraperClients } from "../lib/scraperClients.js";
 import { ALL_TEST_SITES } from "../lib/testSites.js";
-
-const vendors = [
-  { name: "firecrawl", scraper: firecrawlScraper },
-  { name: "exa", scraper: exaScraper },
-  // { name: "tavily", scraper: tavilyScraper },
-  { name: "linkup", scraper: linkupScraper },
-];
 
 describe("Web Scraper Evaluation", () => {
   // Run all vendor-site combinations in parallel
-  vendors.forEach(({ name, scraper }) => {
+  scraperClients.forEach(({ name, scrape }) => {
     describe(`${name} vendor`, () => {
       ALL_TEST_SITES.forEach((testSite: TestSite) => {
         it.concurrent(
           `should scrape ${testSite.name}`,
           async () => {
             const startTime = Date.now();
-            const result = await scraper(testSite.url);
+            const result = await scrape(testSite.url);
             const endTime = Date.now();
             const totalTime = endTime - startTime;
 
