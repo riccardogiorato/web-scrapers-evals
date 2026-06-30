@@ -1,4 +1,4 @@
-import { Reporter } from "vitest";
+// Custom reporter class - no need to implement vitest's Reporter interface
 import * as fs from "fs";
 import * as crypto from "crypto";
 import {
@@ -10,7 +10,7 @@ import {
   realEstateTestSites,
   socialMediaTestSites,
   extraTestSites,
-} from "./src/lib/testSites";
+} from "./src/lib/testSites.js";
 
 type TestMeta = {
   file: string;
@@ -24,7 +24,7 @@ type TestMeta = {
   scrapingTimeMs?: number | null;
 };
 
-export default class VendorTableReporter implements Reporter {
+export default class VendorTableReporter {
   allTests: Map<string, TestMeta> = new Map();
   private siteNameToUrl: Map<string, string> = new Map();
 
@@ -320,5 +320,30 @@ export default class VendorTableReporter implements Reporter {
     }
 
     printColorTable(coloredTable, columns);
+
+    // Also write a markdown table to a file for easy README updates
+    const markdownLines: string[] = [];
+
+    // Markdown header
+    markdownLines.push(`| Site | ${vendors.join(" | ")} |`);
+    // Markdown separator row
+    markdownLines.push(
+      `| --- | ${vendors.map(() => "---").join(" | ")} |`
+    );
+    // Markdown body rows (including separator/summary rows)
+    for (const row of table) {
+      const cells = vendors.map((vendor) => row[vendor] ?? "-");
+      markdownLines.push(`| ${row["Site"]} | ${cells.join(" | ")} |`);
+    }
+
+    try {
+      fs.writeFileSync(
+        "cache/latest-table.md",
+        markdownLines.join("\n"),
+        "utf8"
+      );
+    } catch (error) {
+      console.warn("Failed to write markdown table:", error);
+    }
   }
 }

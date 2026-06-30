@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 # Cache directories
 /cache
 /html
+/.pnpm-store
