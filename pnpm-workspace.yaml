@@ -1,4 +1,7 @@
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@mendable/firecrawl-js@4.29.0'
+  - linkup-sdk@3.2.7
 onlyBuiltDependencies:
   - esbuild

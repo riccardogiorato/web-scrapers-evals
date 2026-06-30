@@ -1,7 +1,7 @@
 import { createTogetherAI } from "@ai-sdk/togetherai";
 import { LinkupClient } from "linkup-sdk";
 import Firecrawl from "@mendable/firecrawl-js";
-import Exa from "exa-js";
+import { Exa } from "exa-js";
 import { BraveSearch } from "brave-search";
 import { tavily } from "@tavily/core";
 import "dotenv/config";

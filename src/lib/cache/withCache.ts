@@ -1,4 +1,4 @@
-import { ScrapedContent, ScraperFunction } from "../types";
+import { ScrapedContent, ScraperFunction } from "../types.js";
 
 import fs from 'fs/promises';
 import path from 'path';

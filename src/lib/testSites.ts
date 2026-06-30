@@ -1,4 +1,4 @@
-import { TestSite } from "./types";
+import { TestSite } from "./types.js";
 
 // Comprehensive test sites for web scraper evaluation
 // Includes real-world use cases (jobs, real estate, social media) and content quality sites (academic, news, technical, e-commerce)
@@ -115,4 +115,3 @@ export const ALL_TEST_SITES: TestSite[] = [
   ...ecommerceTestSites,
   ...extraTestSites
 ].sort((a, b) => a.name.localeCompare(b.name));
-

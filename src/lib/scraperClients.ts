@@ -1,10 +1,11 @@
-import { ScraperFunction, ScrapedContent } from "./types";
+import { ScraperFunction, ScrapedContent } from "./types.js";
 import {
   firecrawlClient,
   exaClient,
   linkupClient,
-} from "./apiClients";
-import { withCache } from "./cache/withCache";
+  tavilyClient,
+} from "./apiClients.js";
+import { withCache } from "./cache/withCache.js";
 import { fetchParallelMcpContent } from "./parallelMcpClient.js";
 
 // Scraper client interface
@@ -172,6 +173,55 @@ const parallelScraperImpl: ScraperFunction = async (
   }
 };
 
+// Tavily scraper implementation
+const tavilyScraperImpl: ScraperFunction = async (
+  url: string,
+  timeout = 30000,
+) => {
+  const startTime = Date.now();
+
+  try {
+    const response = await tavilyClient.extract([url], {
+      extractDepth: "advanced",
+      format: "markdown",
+      timeout: Math.ceil(timeout / 1000),
+    });
+
+    const failedResult = response.failedResults?.[0];
+    if (failedResult) {
+      return {
+        url,
+        error: failedResult.error,
+      };
+    }
+
+    const result = response.results?.[0];
+    if (!result) {
+      return {
+        url,
+        error: "Tavily returned no extraction result",
+      };
+    }
+
+    return {
+      url,
+      response: {
+        title: result.title ?? "",
+        content: result.rawContent ?? "",
+        scrapingTimeMs: Date.now() - startTime,
+      },
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    return {
+      url,
+      error: errorMessage,
+    };
+  }
+};
+
 // Health check functions
 async function checkFirecrawl(): Promise<boolean> {
   try {
@@ -218,11 +268,28 @@ async function checkParallel(): Promise<boolean> {
   }
 }
 
+async function checkTavily(): Promise<boolean> {
+  try {
+    const result = await tavilyClient.extract(["https://tavily.com/"], {
+      extractDepth: "basic",
+      format: "markdown",
+    });
+    return (result.results?.[0]?.rawContent?.length ?? 0) > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
 // Cached scraper functions
 export const firecrawlScraper = withCache("firecrawl", firecrawlScraperImpl);
 export const exaScraper = withCache("exa", exaScraperImpl);
 export const linkupScraper = withCache("linkup", linkupScraperImpl);
 export const parallelScraper = withCache("parallel", parallelScraperImpl);
+export const tavilyScraper = withCache("tavily", tavilyScraperImpl);
+
+const shouldRunParallel =
+  !!process.env.PARALLEL_API_KEY ||
+  process.env.INCLUDE_ANONYMOUS_PARALLEL === "true";
 
 // Scraper clients array for testing
 export const scraperClients: ScraperClient[] = [
@@ -242,10 +309,19 @@ export const scraperClients: ScraperClient[] = [
     healthCheck: checkLinkup,
   },
   {
-    name: "parallel",
-    scrape: parallelScraper,
-    healthCheck: checkParallel,
+    name: "tavily",
+    scrape: tavilyScraper,
+    healthCheck: checkTavily,
   },
+  ...(shouldRunParallel
+    ? [
+        {
+          name: "parallel",
+          scrape: parallelScraper,
+          healthCheck: checkParallel,
+        },
+      ]
+    : []),
 ];
 
 // Export individual implementations for direct use if needed
@@ -254,4 +330,5 @@ export {
   exaScraperImpl,
   linkupScraperImpl,
   parallelScraperImpl,
+  tavilyScraperImpl,
 };
