@@ -16,11 +16,11 @@ Current cold-cache run from **30 June 2026**, using latest provider SDKs and a q
 
 | Provider | Usable Success | Avg Time | Takeaway |
 | --- | --- | --- | --- |
-| **parallel** | **25/25** | 3.7s | Best coverage in this run. |
-| **tavily** | 21/25 | **0.3s** | Fastest high-success provider. |
-| **firecrawl** | 21/25 | 1.3s | Strong success/latency balance. |
-| **exa** | 16/25 | 1.0s | Fast, but quality gate catches short stubs and blocked pages. |
-| **linkup** | 16/25 | 6.8s | Useful on several hard pages, but slow and less consistent here. |
+| <img src="https://www.google.com/s2/favicons?domain=parallel.ai&sz=32" width="16" height="16" alt=""> **parallel** | **25/25** | 3.7s | Best coverage in this run. |
+| <img src="https://www.google.com/s2/favicons?domain=tavily.com&sz=32" width="16" height="16" alt=""> **tavily** | 21/25 | **0.3s** | Fastest high-success provider. |
+| <img src="https://www.google.com/s2/favicons?domain=firecrawl.dev&sz=32" width="16" height="16" alt=""> **firecrawl** | 21/25 | 1.3s | Strong success/latency balance. |
+| <img src="https://www.google.com/s2/favicons?domain=exa.ai&sz=32" width="16" height="16" alt=""> **exa** | 16/25 | 1.0s | Fast, but quality gate catches short stubs and blocked pages. |
+| <img src="https://www.google.com/s2/favicons?domain=linkup.so&sz=32" width="16" height="16" alt=""> **linkup** | 16/25 | 6.8s | Useful on several hard pages, but slow and less consistent here. |
 
 ## Why This Matters
 
@@ -81,11 +81,11 @@ This benchmark is designed to catch the thing simple demos miss: a provider can 
 
 Currently implemented:
 
-- Firecrawl
-- Exa
-- Linkup
-- Tavily
-- Parallel Search MCP
+- <img src="https://www.google.com/s2/favicons?domain=firecrawl.dev&sz=32" width="16" height="16" alt=""> Firecrawl
+- <img src="https://www.google.com/s2/favicons?domain=exa.ai&sz=32" width="16" height="16" alt=""> Exa
+- <img src="https://www.google.com/s2/favicons?domain=linkup.so&sz=32" width="16" height="16" alt=""> Linkup
+- <img src="https://www.google.com/s2/favicons?domain=tavily.com&sz=32" width="16" height="16" alt=""> Tavily
+- <img src="https://www.google.com/s2/favicons?domain=parallel.ai&sz=32" width="16" height="16" alt=""> Parallel Search MCP
 
 Parallel uses `https://search.parallel.ai/mcp` with the `web_fetch` tool. The scraper requests `full_content: true` for full-page markdown and falls back to excerpts when full content is empty. Results are cached through the same provider cache wrapper as the other clients.
 
